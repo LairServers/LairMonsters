@@ -1,6 +1,8 @@
 Class ZEDMario extends ZEDSoldierBase;
 
-#exec obj load file="Mario.ukx" package="ZEDSoldiers"
+#exec obj load file="LairMonstersV1_T.utx"
+#exec obj load file="LairMonstersV1_S.uax"
+#exec obj load file="LairMonstersV1_A.ukx"
 
 function RangedAttack(Actor A)
 {
@@ -159,7 +161,7 @@ State FiringWeapon
 
 defaultproperties
 {
-     WeaponFireSound=Sound'LairMonstersV1.fx.Fireball'
+     WeaponFireSound=Sound'LairMonstersV1_S.fx.Fireball'
      WAttachClass=Class'KFMod.FlameThrowerAttachment'
      WeaponFireRate=0.450000
      WeaponMissRate=0.150000
@@ -167,11 +169,11 @@ defaultproperties
      AimingError=350.000000
      FireAnim="NadeToss"
      MoanVoice=None
-     JumpSound=Sound'LairMonstersV1.fx.Jump'
+     JumpSound=Sound'LairMonstersV1_S.fx.Jump'
      OriginalGroundSpeed=270.000000
      HeadHealth=750.000000
-     HitSound(0)=Sound'LairMonstersV1.Taunts.mario-pain'
-     DeathSound(0)=Sound'LairMonstersV1.Taunts.mario-die'
+     HitSound(0)=Sound'LairMonstersV1_S.Taunts.mario-pain'
+     DeathSound(0)=Sound'LairMonstersV1_S.Taunts.mario-die'
      ScoringValue=40
      IdleHeavyAnim="NadeIdle"
      IdleRifleAnim="NadeIdle"
@@ -181,7 +183,7 @@ defaultproperties
      MenuName="Super Mario"
      IdleWeaponAnim="NadeIdle"
      IdleRestAnim="NadeIdle"
-     Mesh=SkeletalMesh'LairMonstersV1.MarioMesh'
-     Skins(0)=Texture'LairMonstersV1.Skins.marioheadA'
-     Skins(1)=Texture'LairMonstersV1.Skins.marioheadA'
+     Mesh=SkeletalMesh'LairMonstersV1_A.MarioMesh'
+     Skins(0)=Texture'LairMonstersV1_T.Skins.marioheadA'
+     Skins(1)=Texture'LairMonstersV1_T.Skins.marioheadA'
 }
