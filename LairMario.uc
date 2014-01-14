@@ -1,4 +1,4 @@
-Class ZEDMario extends ZEDSoldierBase;
+Class LairMario extends LairSoldierBase;
 
 #exec obj load file="LairMonstersV1_T.utx"
 #exec obj load file="LairMonstersV1_S.uax"
@@ -82,7 +82,7 @@ function FireWeaponOnce()
 	if ( !SavedFireProperties.bInitialized )
 	{
 		SavedFireProperties.AmmoClass = Class'FlameAmmo';
-		SavedFireProperties.ProjectileClass = Class'MarioFireBall';
+		SavedFireProperties.ProjectileClass = Class'LairMarioFireBall';
 		SavedFireProperties.WarnTargetPct = 0.2;
 		SavedFireProperties.MaxRange = 2000;
 		SavedFireProperties.bTossed = True;
@@ -95,7 +95,7 @@ function FireWeaponOnce()
 	Start = GetFirePosStart();
 	R = AdjustAim(SavedFireProperties,Start,AimingError);
 
-	Spawn(Class'MarioFireBall',,,Start,R);
+	Spawn(Class'LairMarioFireBall',,,Start,R);
 	PlaySound(WeaponFireSound,SLOT_Interact,TransientSoundVolume * 2.5,,TransientSoundRadius,(1.0 + FRand()*0.015f),false);
 }
 function DesireAttackPoint( out float Desire, NavigationPoint N, Pawn Enemy )
