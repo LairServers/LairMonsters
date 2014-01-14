@@ -1,4 +1,4 @@
-class ZEDMarioBoss extends ZEDMario;
+class LairMarioBoss extends LairMario;
 
 #exec obj load file="LairMonstersV1_T.utx"
 #exec obj load file="LairMonstersV1_S.uax"
