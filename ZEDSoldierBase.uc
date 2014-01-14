@@ -1,10 +1,9 @@
 // Written by Marco
-Class ZEDSoldierBase extends KFMonster
+Class LairSoldierBase extends KFMonster
 	Abstract;
 
-#exec obj load file="LairMonstersV1_T.utx"
 #exec obj load file="LairMonstersV1_S.uax"
-#exec obj load file="LairMonstersV1_A.ukx"
+#exec obj load file="KFSoldiers.ukx"
 
 var(Sounds) sound SoundFootsteps[20],WeaponFireSound,WeaponReloadSound;
 var(Weapon) class<KFWeaponAttachment> WAttachClass;
@@ -28,8 +27,8 @@ simulated function PostBeginPlay()
 	if( Level.NetMode!=NM_Client )
 	{
 		AttachWeapon();
-		if( ZEDSoldierController(Controller)!=None )
-			ZEDSoldierController(Controller).ZZB = Self;
+		if( LairSoldierController(Controller)!=None )
+			LairSoldierController(Controller).ZZB = Self;
 	}
 }
 
@@ -376,7 +375,7 @@ State FiringWeapon
 	{
 		FireWeaponOnce();
 		if( ++ClipCount>=AmmoPerClip )
-			ZEDSoldierController(Controller).WhatToDoNext(69);
+			LairSoldierController(Controller).WhatToDoNext(69);
 	}
 }
 State Reloading
@@ -468,7 +467,7 @@ defaultproperties
      HealthMax=300.000000
      Health=300
      MenuName="Infected Soldier"
-     ControllerClass=Class'LairMonstersV1.ZEDSoldierController'
+     ControllerClass=Class'LairMonstersV1.LairSoldierController'
      MovementAnims(1)="RunB"
      TurnLeftAnim="TurnL"
      TurnRightAnim="TurnR"
