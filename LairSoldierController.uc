@@ -1,10 +1,6 @@
-Class ZEDSoldierController extends KFMonsterController;
+Class LairSoldierController extends KFMonsterController;
 
-#exec obj load file="LairMonstersV1_T.utx"
-#exec obj load file="LairMonstersV1_S.uax"
-#exec obj load file="LairMonstersV1_A.ukx"
-
-var ZEDSoldierBase ZZB;
+var LairSoldierBase ZZB;
 var vector MoveStartSpot;
 var byte NumReloadMoves;
 var NavigationPoint RandomMoveDest;
