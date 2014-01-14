@@ -3,6 +3,10 @@
 //=============================================================================
 class MarioFireBall extends LAWProj;
 
+#exec obj load file="LairMonstersV1_T.utx"
+#exec obj load file="LairMonstersV1_S.uax"
+#exec obj load file="LairMonstersV1_A.ukx"
+
 var     Emitter FlameTrail;
 var     xEmitter    Trail;
 var byte NumBounces;
