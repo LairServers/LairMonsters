@@ -1,7 +1,7 @@
 //=============================================================================
 // MarioFireBall
 //=============================================================================
-class MarioFireBall extends LAWProj;
+class LairMarioFireBall extends LAWProj;
 
 #exec obj load file="LairMonstersV1_T.utx"
 #exec obj load file="LairMonstersV1_S.uax"
