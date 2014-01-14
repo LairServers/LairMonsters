@@ -1,0 +1,876 @@
+class LairAlienQueen extends LairAliensBase
+    dependson(LairAlienEgg)
+    hidecategories(AnimTweaks,DeRes,Force,Gib,Karma,UDamage,UnrealPawn)
+    config(User);
+
+var() int ScreamRadius;
+var() class<DamageType> ScreamDamageType;
+var() int ScreamForce;
+var() int FearDamageCount;
+var(Shake) Rotator RotMag;
+var(Shake) float RotRate;
+var(Shake) Vector OffsetMag;
+var(Shake) float OffsetRate;
+var(Shake) float ShakeTime;
+var(Shake) float ShakeFadeTime;
+var(Shake) float ShakeEffectScalar;
+var(Shake) float MinShakeEffectScale;
+var(Shake) float ScreamBlurScale;
+var() float BurnDamageScale;
+var int NeedHelpLevel[3];
+var int Helped;
+var int totalDamage;
+var float DeathTimer;
+var float RunAttackTimeout;
+var float NextEggDropTime;
+var byte EggCounter;
+var bool bRunning;
+var bool bAboutToDie;
+
+replication
+{
+    // Pos:0x000
+    reliable if(Role == ROLE_Authority)
+        bRunning
+}
+
+final function bool InSafeSpot()
+{
+    local Controller C;
+
+    C = Level.ControllerList;
+    J0x14:
+    // End:0x96 [Loop If]
+    if(C != none)
+    {
+        // End:0x7F
+        if(((C.bIsPlayer && KFPawn(C.Pawn) != none) && C.Pawn.Health > 0) && C.LineOfSightTo(self))
+        {
+            return false;
+        }
+        C = C.nextController;
+        // [Loop Continue]
+        goto J0x14;
+    }
+    return true;
+    //return;    
+}
+
+simulated function PostNetReceive()
+{
+    // End:0x19
+    if(bRunning)
+    {
+        MovementAnims[0] = 'Run';
+    }
+    // End:0x28
+    else
+    {
+        MovementAnims[0] = default.MovementAnims[0];
+    }
+    //return;    
+}
+
+function bool SetBossLaught()
+{
+    local Controller C;
+
+    GotoState('LayEggs', 'DropEggs');
+    C = Level.ControllerList;
+    J0x20:
+    // End:0x91 [Loop If]
+    if(C != none)
+    {
+        // End:0x7A
+        if(PlayerController(C) != none)
+        {
+            PlayerController(C).SetViewTarget(self);
+            PlayerController(C).ClientSetViewTarget(self);
+            PlayerController(C).ClientSetBehindView(true);
+        }
+        C = C.nextController;
+        // [Loop Continue]
+        goto J0x20;
+    }
+    return true;
+    //return;    
+}
+
+simulated function PostBeginPlay()
+{
+    super.PostBeginPlay();
+    // End:0x18
+    if(Role < ROLE_Authority)
+    {
+        return;
+    }
+    NeedHelpLevel[0] = int(float(Health) / 1.250);
+    NeedHelpLevel[1] = int(float(Health) / 2.0);
+    NeedHelpLevel[2] = int(float(Health) / 3.20);
+    //return;    
+}
+
+function bool MakeGrandEntry()
+{
+    bAlwaysRelevant = true;
+    bIsBossMob = true;
+    GotoState('LayEggs', 'DropEggs');
+    return true;
+    //return;    
+}
+
+function bool FlipOver()
+{
+    return false;
+    //return;    
+}
+
+function TakeDamage(int Damage, Pawn instigatedBy, Vector HitLocation, Vector Momentum, class<DamageType> DamageType, optional int HitIndex)
+{
+    local int OldHP;
+
+    OldHP = Health;
+    super.TakeDamage(Damage, instigatedBy, HitLocation, Momentum, DamageType);
+    // End:0x85
+    if(NextEggDropTime < Level.TimeSeconds)
+    {
+        totalDamage += (OldHP - Health);
+        bIsCoward = totalDamage > FearDamageCount;
+        bShouldLurk = bIsCoward;
+        // End:0x85
+        if(bIsCoward)
+        {
+            GotoState('LayEggs');
+        }
+    }
+    //return;    
+}
+
+function GivenNewMarker()
+{
+    // End:0x20
+    if(bRunning && NumZCDHits > 1)
+    {
+        GotoState('RunningToMarker');
+    }
+    // End:0x27
+    else
+    {
+        GotoState('None');
+    }
+    //return;    
+}
+
+function PlayChallengeSound()
+{
+    // End:0x48
+    if(NextEggDropTime < Level.TimeSeconds)
+    {
+        NextEggDropTime = Level.TimeSeconds + 2.0;
+        // End:0x48
+        if(InSafeSpot())
+        {
+            GotoState('LayEggs', 'DropEggs');
+        }
+    }
+    //return;    
+}
+
+function RangedAttack(Actor A)
+{
+    local float dist;
+
+    // End:0x0B
+    if(bShotAnim)
+    {
+        return;
+    }
+    dist = VSize(A.Location - Location);
+    // End:0xCA
+    if(dist < ((MeleeRange + CollisionRadius) + A.CollisionRadius))
+    {
+        bShotAnim = true;
+        dist = FRand();
+        // End:0x7B
+        if(dist < 0.330)
+        {
+            SetAnimAction('Eat');
+        }
+        // End:0xA3
+        else
+        {
+            // End:0x98
+            if(dist < 0.660)
+            {
+                SetAnimAction('Melee02');
+            }
+            // End:0xA3
+            else
+            {
+                SetAnimAction('Melee01');
+            }
+        }
+        Controller.bPreparingMove = true;
+        Acceleration = vect(0.0, 0.0, 0.0);
+    }
+    // End:0x161
+    else
+    {
+        // End:0x161
+        if(dist <= float(ScreamRadius))
+        {
+            bShotAnim = true;
+            // End:0x12D
+            if(dist < (float(ScreamRadius) * 0.50))
+            {
+                SetAnimAction('Roar');
+                Controller.bPreparingMove = true;
+                Acceleration = vect(0.0, 0.0, 0.0);
+            }
+            // End:0x161
+            else
+            {
+                Controller.bPreparingMove = false;
+                SetAnimAction('RoarRun');
+                // End:0x161
+                if(dist <= float(700))
+                {
+                    GotoState('RunningState');
+                }
+            }
+        }
+    }
+    //return;    
+}
+
+function RemoveHead()
+{
+    //return;    
+}
+
+simulated function int DoAnimAction(name AnimName)
+{
+    // End:0x51
+    if(AnimName == 'RoarRun')
+    {
+        // End:0x29
+        if(AnimName == 'RoarRun')
+        {
+            AnimName = 'Roar';
+        }
+        AnimBlendParams(1, 1.0, 0.0,, SpineBone1);
+        UnresolvedNativeFunction_97(AnimName,, 0.10, 1);
+        return 1;
+    }
+    UnresolvedNativeFunction_97(AnimName,, 0.10);
+    return 0;
+    //return;    
+}
+
+simulated function SpawnTwoShots()
+{
+    // End:0x1F
+    if(Level.NetMode != NM_DedicatedServer)
+    {
+        DoShakeEffect();
+    }
+    // End:0xC6
+    if(Level.NetMode != NM_Client)
+    {
+        // End:0xA1
+        if((Controller != none) && KFDoorMover(Controller.Target) != none)
+        {
+            Controller.Target.TakeDamage(int(float(ScreamDamage) * 0.90), self, Location, vect(0.0, 0.0, 0.0), ScreamDamageType);
+        }
+        // End:0xC6
+        else
+        {
+            HurtRadius(float(ScreamDamage), float(ScreamRadius), ScreamDamageType, float(ScreamForce), Location);
+        }
+    }
+    //return;    
+}
+
+simulated function DoShakeEffect()
+{
+    local PlayerController PC;
+    local float dist, Scale, BlurScale;
+
+    PC = Level.GetLocalPlayerController();
+    // End:0x213
+    if((PC != none) && PC.ViewTarget != none)
+    {
+        dist = VSize(Location - PC.ViewTarget.Location);
+        // End:0x213
+        if(dist < float(ScreamRadius))
+        {
+            Scale = (float(ScreamRadius) - dist) / float(ScreamRadius);
+            Scale *= ShakeEffectScalar;
+            BlurScale = Scale;
+            // End:0xDF
+            if(!FastTrace(PC.ViewTarget.Location, Location))
+            {
+                Scale *= 0.250;
+                BlurScale = Scale;
+            }
+            // End:0xF6
+            else
+            {
+                Scale = Lerp(Scale, MinShakeEffectScale, 1.0);
+            }
+            PC.SetAmbientShake(Level.TimeSeconds + ShakeFadeTime, ShakeTime, OffsetMag * Scale, OffsetRate, RotMag * Scale, RotRate);
+            // End:0x189
+            if(KFHumanPawn(PC.ViewTarget) != none)
+            {
+                KFHumanPawn(PC.ViewTarget).AddBlur(ShakeTime, BlurScale * ScreamBlurScale);
+            }
+            // End:0x213
+            if((((Level != none) && Level.Game != none) && !KFGameType(Level.Game).bDidSirenScreamMessage) && FRand() < 0.10)
+            {
+                PC.Speech('Auto', 16, "");
+                KFGameType(Level.Game).bDidSirenScreamMessage = true;
+            }
+        }
+    }
+    //return;    
+}
+
+simulated function HurtRadius(float DamageAmount, float DamageRadius, class<DamageType> DamageType, float Momentum, Vector HitLocation)
+{
+    local Actor Victims;
+    local float damageScale, dist;
+    local Vector Dir;
+    local float UsedDamageAmount;
+
+    // End:0x0B
+    if(bHurtEntry)
+    {
+        return;
+    }
+    bHurtEntry = true;
+    // End:0x229
+    foreach VisibleCollidingActors(class'Actor', Victims, DamageRadius, HitLocation)
+    {
+        // End:0x228
+        if((((Victims != self) && !Victims.UnresolvedNativeFunction_97('FluidSurfaceInfo')) && !Victims.UnresolvedNativeFunction_97('KFMonster')) && !Victims.UnresolvedNativeFunction_97('ExtendedZCollision'))
+        {
+            Dir = Victims.Location - HitLocation;
+            dist = FMax(1.0, VSize(Dir));
+            Dir = Dir / dist;
+            damageScale = 1.0 - FMax(0.0, (dist - Victims.CollisionRadius) / DamageRadius);
+            // End:0x112
+            if(!Victims.UnresolvedNativeFunction_97('KFHumanPawn'))
+            {
+                Momentum = 0.0;
+            }
+            // End:0x134
+            if(Victims.UnresolvedNativeFunction_97('KFGlassMover'))
+            {
+                UsedDamageAmount = 100000.0;
+            }
+            // End:0x13F
+            else
+            {
+                UsedDamageAmount = DamageAmount;
+            }
+            Victims.TakeDamage(int(damageScale * UsedDamageAmount), Instigator, Victims.Location - ((0.50 * (Victims.CollisionHeight + Victims.CollisionRadius)) * Dir), (damageScale * Momentum) * Dir, DamageType);
+            // End:0x228
+            if(((Instigator != none) && Vehicle(Victims) != none) && Vehicle(Victims).Health > 0)
+            {
+                Vehicle(Victims).DriverRadiusDamage(UsedDamageAmount, DamageRadius, Instigator.Controller, DamageType, Momentum, HitLocation);
+            }
+        }        
+    }    
+    bHurtEntry = false;
+    //return;    
+}
+
+function Died(Controller Killer, class<DamageType> DamageType, Vector HitLocation)
+{
+    local Controller C;
+
+    super(Pawn).Died(Killer, DamageType, HitLocation);
+    // End:0xD6
+    if(bIsBossMob)
+    {
+        KFGameType(Level.Game).DoBossDeath();
+        C = Level.ControllerList;
+        J0x4F:
+        // End:0xD6 [Loop If]
+        if(C != none)
+        {
+            // End:0xBF
+            if(PlayerController(C) != none)
+            {
+                PlayerController(C).SetViewTarget(self);
+                PlayerController(C).ClientSetViewTarget(self);
+                PlayerController(C).bBehindView = true;
+                PlayerController(C).ClientSetBehindView(true);
+            }
+            C = C.nextController;
+            // [Loop Continue]
+            goto J0x4F;
+        }
+    }
+    //return;    
+}
+
+state RunningState
+{
+    function bool CanSpeedAdjust()
+    {
+        return false;
+        //return;        
+    }
+
+    function BeginState()
+    {
+        GroundSpeed = OriginalGroundSpeed * 1.8750;
+        bRunning = true;
+        // End:0x39
+        if(Level.NetMode != NM_DedicatedServer)
+        {
+            PostNetReceive();
+        }
+        NetUpdateTime = Level.TimeSeconds - float(1);
+        //return;        
+    }
+
+    function EndState()
+    {
+        GroundSpeed = GetOriginalGroundSpeed();
+        bRunning = false;
+        // End:0x33
+        if(Level.NetMode != NM_DedicatedServer)
+        {
+            PostNetReceive();
+        }
+        RunAttackTimeout = 0.0;
+        NetUpdateTime = Level.TimeSeconds - float(1);
+        //return;        
+    }
+
+    function RangedAttack(Actor A)
+    {
+        local float ChargeChance;
+
+        // End:0x2F
+        if(Level.Game.GameDifficulty < 2.0)
+        {
+            ChargeChance = 0.10;
+        }
+        // End:0x98
+        else
+        {
+            // End:0x5E
+            if(Level.Game.GameDifficulty < 4.0)
+            {
+                ChargeChance = 0.20;
+            }
+            // End:0x98
+            else
+            {
+                // End:0x8D
+                if(Level.Game.GameDifficulty < 5.0)
+                {
+                    ChargeChance = 0.30;
+                }
+                // End:0x98
+                else
+                {
+                    ChargeChance = 0.40;
+                }
+            }
+        }
+        // End:0xB8
+        if(bShotAnim || Physics == 3)
+        {
+            return;
+        }
+        // End:0x136
+        else
+        {
+            // End:0x136
+            if(CanAttack(A))
+            {
+                bShotAnim = true;
+                // End:0xFE
+                if(FRand() < ChargeChance)
+                {
+                    SetAnimAction('ClawAndMove');
+                    RunAttackTimeout = GetAnimDuration('Eat', 1.0);
+                }
+                // End:0x134
+                else
+                {
+                    SetAnimAction('Claw');
+                    Controller.bPreparingMove = true;
+                    Acceleration = vect(0.0, 0.0, 0.0);
+                    GotoState('None');
+                }
+                return;
+            }
+        }
+        //return;        
+    }
+
+    simulated function Tick(float DeltaTime)
+    {
+        // End:0x45
+        if(RunAttackTimeout > float(0))
+        {
+            RunAttackTimeout -= DeltaTime;
+            // End:0x45
+            if((RunAttackTimeout <= float(0)) && !bZedUnderControl)
+            {
+                RunAttackTimeout = 0.0;
+                GotoState('None');
+            }
+        }
+        // End:0x9C
+        if(((Role == ROLE_Authority) && bShotAnim) && !bWaitForAnim)
+        {
+            // End:0x9C
+            if(LookTarget != none)
+            {
+                Acceleration = AccelRate * Normal(LookTarget.Location - Location);
+            }
+        }
+        global.Tick(DeltaTime);
+        //return;        
+    }
+
+Begin:
+    goto 'CheckCharge';
+CheckCharge:
+
+    // End:0x71
+    if(((Controller != none) && Controller.Target != none) && VSize(Controller.Target.Location - Location) < float(500))
+    {
+        Sleep(0.50 + (FRand() * 0.50));
+        goto 'CheckCharge';
+    }
+    // End:0x78
+    else
+    {
+        GotoState('None');
+    }
+    stop;                
+}
+
+state RunningToMarker extends RunningState
+{
+    simulated function Tick(float DeltaTime)
+    {
+        // End:0x45
+        if(RunAttackTimeout > float(0))
+        {
+            RunAttackTimeout -= DeltaTime;
+            // End:0x45
+            if((RunAttackTimeout <= float(0)) && !bZedUnderControl)
+            {
+                RunAttackTimeout = 0.0;
+                GotoState('None');
+            }
+        }
+        // End:0x9C
+        if(((Role == ROLE_Authority) && bShotAnim) && !bWaitForAnim)
+        {
+            // End:0x9C
+            if(LookTarget != none)
+            {
+                Acceleration = AccelRate * Normal(LookTarget.Location - Location);
+            }
+        }
+        global.Tick(DeltaTime);
+        //return;        
+    }
+
+Begin:
+    goto 'CheckCharge';
+CheckCharge:
+
+    // End:0x7C
+    if(bZedUnderControl || ((Controller != none) && Controller.Target != none) && VSize(Controller.Target.Location - Location) < float(700))
+    {
+        Sleep(0.50 + (FRand() * 0.50));
+        goto 'CheckCharge';
+    }
+    // End:0x83
+    else
+    {
+        GotoState('None');
+    }
+    stop;                    
+}
+
+state LayEggs extends RunningState
+{
+    function RangedAttack(Actor A)
+    {
+        local float D;
+
+        // End:0xBE
+        if(!bShotAnim && VSize(A.Location - Location) < ((MeleeRange + CollisionRadius) + A.CollisionRadius))
+        {
+            bShotAnim = true;
+            D = FRand();
+            // End:0x72
+            if(D < 0.330)
+            {
+                SetAnimAction('Eat');
+            }
+            // End:0x9A
+            else
+            {
+                // End:0x8F
+                if(D < 0.660)
+                {
+                    SetAnimAction('Melee02');
+                }
+                // End:0x9A
+                else
+                {
+                    SetAnimAction('Melee01');
+                }
+            }
+            Controller.bPreparingMove = true;
+            Acceleration = vect(0.0, 0.0, 0.0);
+        }
+        //return;        
+    }
+
+    function BeginState()
+    {
+        bIsCoward = true;
+        bShouldLurk = true;
+        GroundSpeed = OriginalGroundSpeed * 1.8750;
+        bRunning = true;
+        // End:0x49
+        if(Level.NetMode != NM_DedicatedServer)
+        {
+            PostNetReceive();
+        }
+        //return;        
+    }
+
+    function TakeDamage(int Damage, Pawn instigatedBy, Vector HitLocation, Vector Momentum, class<DamageType> DamageType, optional int HitIndex)
+    {
+        super(AlienQueen).TakeDamage(Damage, instigatedBy, HitLocation, Momentum, DamageType);
+        //return;        
+    }
+
+    function EndState()
+    {
+        totalDamage = 0;
+        bIsCoward = false;
+        bShouldLurk = false;
+        NextEggDropTime = (Level.TimeSeconds + 20.0) + (FRand() * 50.0);
+        GroundSpeed = GetOriginalGroundSpeed();
+        bRunning = false;
+        // End:0x70
+        if(Level.NetMode != NM_DedicatedServer)
+        {
+            PostNetReceive();
+        }
+        RunAttackTimeout = 0.0;
+        //return;        
+    }
+
+    final function PlayLayEggs()
+    {
+        bShotAnim = true;
+        SetAnimAction('Call');
+        Controller.bPreparingMove = true;
+        Acceleration = vect(0.0, 0.0, 0.0);
+        Controller.FocalPoint = (VRand() * float(2000)) + Location;
+        Controller.FocalPoint.Z = Location.Z;
+        Controller.GotoState('WaitForAnim');
+        //return;        
+    }
+
+    final function SpawnEgg()
+    {
+        local AlienEgg E;
+        local Vector X, Y, Z;
+
+        E = UnresolvedNativeFunction_97(class'AlienEgg',,, Location + vect(0.0, 0.0, 100.0));
+        GetAxes(Rotation, X, Y, Z);
+        E.Velocity = ((X * ((FRand() + 0.50) * -600.0)) + ((Y * (FRand() - 0.50)) * 700.0)) - ((vect(0.0, 0.0, 1.0) * FRand()) * 300.0);
+        //return;        
+    }
+
+Begin:
+    EggCounter = 0;
+    J0x08:
+    // End:0x39 [Loop If]
+    if((EggCounter < 10) && !InSafeSpot())
+    {
+        Sleep(0.50 + FRand());
+        ++ EggCounter;
+DropEggs:
+
+        // [Loop Continue]
+        goto J0x08;
+    }
+    PlayLayEggs();
+    Sleep(2.0);
+    EggCounter = byte(Rand(4));
+    J0x53:
+    // End:0x84 [Loop If]
+    if(EggCounter < 10)
+    {
+        SpawnEgg();
+        Sleep(0.10 + (FRand() * 0.20));
+        ++ EggCounter;
+        // [Loop Continue]
+        goto J0x53;
+    }
+    GotoState('None');
+    stop;                    
+}
+
+defaultproperties
+{
+    ScreamRadius=700
+    ScreamDamageType=Class'KFMod.SirenScreamDamage'
+    ScreamForce=-150000
+    FearDamageCount=3800
+    RotMag=(Pitch=150,Yaw=150,Roll=150)
+    RotRate=500.0
+    OffsetMag=(X=0.0,Y=5.0,Z=1.0)
+    OffsetRate=500.0
+    ShakeTime=2.0
+    ShakeFadeTime=0.250
+    ShakeEffectScalar=1.0
+    MinShakeEffectScale=0.60
+    ScreamBlurScale=0.850
+    BurnDamageScale=0.250
+    DeathAnimations(0)=Death
+    DeathAnimations(1)=Sleep_In
+    MeleeAnims[0]=Melee01
+    MeleeAnims[1]=Melee02
+    MeleeAnims[2]=Eat
+    HitAnims[0]=DodgeL
+    HitAnims[1]=DodgeR
+    HitAnims[2]=DodgeL
+    MoanVoice=SoundGroup'AlienQueenSnd.QueenTalk'
+    KFHitFront=DodgeL
+    KFHitBack=DodgeL
+    KFHitLeft=DodgeR
+    KFHitRight=DodgeR
+    ZombieFlag=3
+    MeleeDamage=800
+    damageForce=50000
+    bFatAss=true
+    JumpSound=SoundGroup'AlienQueenSnd.QueenAttack'
+    ScreamDamage=30
+    bMeleeStunImmune=true
+    CrispUpThreshhold=8
+    bUseExtendedCollision=true
+    ColOffset=(X=126.0,Y=0.0,Z=124.0)
+    ColRadius=120.0
+    ColHeight=70.0
+    ExtCollAttachBoneName=Bone05
+    LeftShoulderBone=Arm_L
+    RightShoulderBone=Arm_R
+    LeftThighBone=Thigh_L
+    RightThighBone=Thigh_R
+    LeftFArmBone=Arm_L
+    RightFArmBone=Arm_R
+    LeftFootBone=Foot_L
+    RightFootBone=Foot_R
+    LeftHandBone=Hand_L
+    RightHandBone=Hand_R
+    NeckBone=Neck02
+    SeveredArmAttachScale=0.90
+    SeveredLegAttachScale=0.90
+    PlayerCountHealthScale=0.150
+    HeadlessWalkAnims[0]=Walk
+    HeadlessWalkAnims[1]=Walk
+    HeadlessWalkAnims[2]=Walk
+    HeadlessWalkAnims[3]=Walk
+    BurningWalkFAnims[0]=Walk
+    BurningWalkFAnims[1]=Walk
+    BurningWalkFAnims[2]=Walk
+    BurningWalkAnims[0]=Walk
+    BurningWalkAnims[1]=Walk
+    BurningWalkAnims[2]=Walk
+    OnlineHeadshotOffset=(X=5.0,Y=0.0,Z=53.0)
+    OnlineHeadshotScale=1.50
+    MotionDetectorThreat=2.0
+    bBoss=true
+    HitSound=SoundGroup'AlienQueenSnd.QueenPain'
+    DeathSound=SoundGroup'AlienQueenSnd.QueenDie'
+    ChallengeSound[0]=SoundGroup'AlienQueenSnd.QueenIdle'
+    ChallengeSound[1]=SoundGroup'AlienQueenSnd.QueenIdle'
+    ChallengeSound[2]=SoundGroup'AlienQueenSnd.QueenIdle'
+    ChallengeSound[3]=SoundGroup'AlienQueenSnd.QueenIdle'
+    ScoringValue=500
+    GruntVolume=2.0
+    FootstepVolume=5.0
+    WallDodgeAnims[0]=Walk
+    WallDodgeAnims[1]=Walk
+    WallDodgeAnims[2]=WalkL
+    WallDodgeAnims[3]=WalkR
+    IdleHeavyAnim=Idle
+    IdleRifleAnim=Idle
+    FireHeavyRapidAnim=Walk
+    FireHeavyBurstAnim=Walk
+    FireRifleRapidAnim=WalkL
+    FireRifleBurstAnim=WalkR
+    FireRootBone=Spine03
+    bCanJump=false
+    HearingThreshold=5000.0
+    Alertness=0.20
+    SightRadius=5000.0
+    PeripheralVision=160.0
+    MeleeRange=250.0
+    GroundSpeed=260.0
+    HealthMax=40000.0
+    Health=40000
+    HeadRadius=25.0
+    HeadHeight=22.20
+    HeadScale=1.20
+    MenuName="Alien Queen"
+    bDoTorsoTwist=false
+    MovementAnims[0]=Run
+    MovementAnims[1]=Run
+    WalkAnims[0]=Walk
+    WalkAnims[1]=Walk
+    WalkAnims[2]=WalkL
+    WalkAnims[3]=WalkR
+    AirAnims[0]=Walk
+    AirAnims[1]=Walk
+    AirAnims[2]=WalkL
+    AirAnims[3]=WalkR
+    TakeoffAnims[0]=Melee01
+    TakeoffAnims[1]=Melee01
+    TakeoffAnims[2]=Melee01
+    TakeoffAnims[3]=Melee01
+    LandAnims[0]=Walk
+    LandAnims[1]=Walk
+    LandAnims[2]=WalkL
+    LandAnims[3]=WalkR
+    AirStillAnim=Walk
+    TakeoffStillAnim=Walk
+    IdleCrouchAnim=Idle
+    IdleWeaponAnim=Idle
+    IdleRestAnim=Idle
+    SpineBone1=Spine01
+    SpineBone2=Spine02
+    AmbientSound=SoundGroup'AlienQueenSnd.QueenTalk'
+    Mesh=SkeletalMesh'AlienQueen_A.AlienQueen'
+    DrawScale=0.90
+    PrePivot=(X=0.0,Y=0.0,Z=4.0)
+    Skins(0)=Combiner'AlienQueenTex.Head02_cmb'
+    Skins(1)=Combiner'AlienQueenTex.Head01_cmb'
+    Skins(2)=Combiner'AlienQueenTex.body_cmb'
+    Skins(3)=Combiner'AlienQueenTex.Mouth_cmb'
+    SoundVolume=200
+    TransientSoundVolume=2.0
+    CollisionRadius=40.0
+    CollisionHeight=50.0
+    Mass=1500.0
+    RotationRate=(Pitch=3072,Yaw=35000,Roll=0)
+}
