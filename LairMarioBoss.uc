@@ -7,7 +7,7 @@ class LairMarioBoss extends LairMario;
 defaultproperties
 {
 	 ScoringValue=400
-	 HeadHealth=3500.0
-	 HealthMax=4000.000000
-	 Health=4000.0
+	 HeadHealth=6500.0
+	 HealthMax=7500.000000
+	 Health=7500.0
 }
