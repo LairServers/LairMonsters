@@ -2,8 +2,9 @@
 Class ZEDSoldierBase extends KFMonster
 	Abstract;
 
-#exec obj load file="ZEDFX.uax" Package="ZEDSoldiers"
-#exec obj load file="KFSoldiers.ukx"
+#exec obj load file="LairMonstersV1_T.utx"
+#exec obj load file="LairMonstersV1_S.uax"
+#exec obj load file="LairMonstersV1_A.ukx"
 
 var(Sounds) sound SoundFootsteps[20],WeaponFireSound,WeaponReloadSound;
 var(Weapon) class<KFWeaponAttachment> WAttachClass;
@@ -434,7 +435,7 @@ defaultproperties
      bFightOnSight=True
      bPickVisPointOnHunt=True
      bFreezeActionAnim=True
-     MoanVoice=SoundGroup'LairMonstersV1.Talk.ZEDTalk'
+     MoanVoice=SoundGroup'LairMonstersV1_S.Talk.ZEDTalk'
      KFHitFront="HitF"
      KFHitBack="HitB"
      KFHitLeft="HitL"
@@ -454,8 +455,8 @@ defaultproperties
      NeckBone="Bip01 Neck"
      OriginalGroundSpeed=500.000000
      HeadHealth=200.000000
-     HitSound(0)=SoundGroup'LairMonstersV1.Misc.ZEDPain'
-     DeathSound(0)=SoundGroup'LairMonstersV1.Misc.ZEDDie'
+     HitSound(0)=SoundGroup'LairMonstersV1_S.Misc.ZEDPain'
+     DeathSound(0)=SoundGroup'LairMonstersV1_S.Misc.ZEDDie'
      IdleHeavyAnim="BullpupIdle"
      IdleRifleAnim="BullpupIdle"
      FireRootBone="bip01 Spine"
