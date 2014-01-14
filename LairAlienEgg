@@ -1,0 +1,162 @@
+class LairAlienEgg extends Decoration;
+
+var Emitter MyTrail;
+var byte NumHits;
+var bool bOpened;
+
+replication
+{
+    // Pos:0x000
+    reliable if(Role == ROLE_Authority)
+        bOpened
+}
+
+simulated function PostBeginPlay()
+{
+    // End:0x62
+    if((Level.NetMode != NM_DedicatedServer) && MyTrail == none)
+    {
+        UnresolvedNativeFunction_97(class'SpitProjectile'.default.SpawnSounds[Rand(class'SpitProjectile'.default.SpawnSounds.Length)], 5);
+        MyTrail = UnresolvedNativeFunction_97(class'SpitFX', self);
+        UnresolvedNativeFunction_97('Idle');
+    }
+    //return;    
+}
+
+simulated function PostNetReceive()
+{
+    // End:0x17
+    if(bOpened)
+    {
+        PlayOpenEgg();
+        bNetNotify = false;
+    }
+    //return;    
+}
+
+simulated function Landed(Vector HitNormal)
+{
+    // End:0x47
+    if((HitNormal.Z < 0.30) && ++ NumHits < 5)
+    {
+        Velocity = MirrorVectorByNormal(Velocity, HitNormal) * 0.350;
+        SetPhysics(2);
+        return;
+    }
+    // End:0x68
+    if(MyTrail != none)
+    {
+        MyTrail.Kill();
+        MyTrail = none;
+    }
+    // End:0xAE
+    if(Level.NetMode != NM_DedicatedServer)
+    {
+        UnresolvedNativeFunction_97(class'SpitProjectile'.default.DestroySounds[Rand(class'SpitProjectile'.default.DestroySounds.Length)], 2);
+        UnresolvedNativeFunction_97(class'SpitExplosion');
+    }
+    SetRotation(rotator(HitNormal) - rot(16384, 0, 0));
+    bBounce = false;
+    SetPhysics(0);
+    //return;    
+}
+
+simulated function HitWall(Vector HitNormal, Actor Wall)
+{
+    Landed(HitNormal);
+    //return;    
+}
+
+function TakeDamage(int Damage, Pawn instigatedBy, Vector HitLocation, Vector Momentum, class<DamageType> DamageType, optional int HitIndex)
+{
+    // End:0x65
+    if((AliensBase(instigatedBy) == none) && (Health -= Damage) <= 0)
+    {
+        // End:0x62
+        if(!bOpened && instigatedBy.PlayerReplicationInfo != none)
+        {
+            instigatedBy.PlayerReplicationInfo.Score += float(15);
+        }
+        Destroy();
+    }
+    //return;    
+}
+
+simulated function Destroyed()
+{
+    // End:0x21
+    if(MyTrail != none)
+    {
+        MyTrail.Kill();
+        MyTrail = none;
+    }
+    // End:0x67
+    if(Level.NetMode != NM_DedicatedServer)
+    {
+        UnresolvedNativeFunction_97(class'SpitProjectile'.default.DestroySounds[Rand(class'SpitProjectile'.default.DestroySounds.Length)], 2);
+        UnresolvedNativeFunction_97(class'SpitExplosion');
+    }
+    //return;    
+}
+
+simulated function PlayOpenEgg()
+{
+    bOpened = true;
+    NetUpdateTime = Level.TimeSeconds - 1.0;
+    // End:0x44
+    if(Level.NetMode != NM_DedicatedServer)
+    {
+        UnresolvedNativeFunction_97('Open');
+    }
+    //return;    
+}
+
+auto state HatchEgg
+{
+    final function HatchEgg()
+    {
+        local Vector X, Y, Z;
+        local AlienQueenHugger H;
+
+        GetAxes(Rotation, X, Y, Z);
+        H = UnresolvedNativeFunction_97(class'AlienQueenHugger',,,, rotator(Z));
+        // End:0x3B
+        if(H == none)
+        {
+            return;
+        }
+        H.Velocity = (Z * (FRand() + 0.50)) * 400.0;
+        H.SetPhysics(2);
+        //return;        
+    }
+
+Begin:
+    Sleep(5.0 + (FRand() * 30.0));
+    PlayOpenEgg();
+    Sleep(1.0);
+    super(AlienEgg).HatchEgg();
+    Sleep(0.50);
+    Destroy();
+    stop;        
+}
+
+defaultproperties
+{
+    Health=150
+    bStatic=false
+    bStasis=false
+    bUpdateSimulatedPosition=true
+    Physics=2
+    RemoteRole=2
+    NetUpdateFrequency=8.0
+    Mesh=SkeletalMesh'AliensKFXeno_SM.Xeno_Egg02_Mesh'
+    DrawScale=0.70
+    TransientSoundVolume=2.0
+    CollisionRadius=15.0
+    CollisionHeight=15.0
+    bCollideActors=true
+    bCollideWorld=true
+    bProjTarget=true
+    bNetNotify=true
+    bBounce=true
+}
