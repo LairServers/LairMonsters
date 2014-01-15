@@ -1,14 +1,15 @@
+//Don't forget to get the Gib Group class: GibGroupAlien
 class LairAliensController extends KFMonsterController
     config(User);
 
-var AliensBase ab;
+var LairAliensBase ab;
 var transient float ValidKillTime;
 var transient byte NoneSightCount;
 var transient bool bInitKill;
 
 function Restart()
 {
-    ab = AliensBase(Pawn);
+    ab = LairAliensBase(Pawn);
     super.Restart();
     //return;    
 }
@@ -18,10 +19,6 @@ function bool CanKillMeYet()
     local Controller C;
 
     // End:0x14
-    if(ab.bIsBossMob)
-    {
-        return false;
-    }
     // End:0x47
     if(!bInitKill)
     {
