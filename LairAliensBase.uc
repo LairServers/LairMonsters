@@ -1,6 +1,6 @@
+//Don't forget to get the Gib Group class: GibGroupAlien
 class LairAliensBase extends KFMonster
-    dependson(AlienClimbMid)
-    dependson(AliensController)
+    dependson(LairAliensController)
     hidecategories(AnimTweaks,DeRes,Force,Gib,Karma,UDamage,UnrealPawn)
     config(User)
     abstract;
@@ -19,16 +19,12 @@ var transient float UnfearTimer;
 var() float PounceSpeed;
 var(Anims) name MeleeAirAnims[2];
 var byte CurrentID;
-var AlienClimbMid ClimbPath;
 var() array<FGibType> GibParts;
 var() array<name> DeathAnimations;
 var() class<Projectile> RangedProjectile;
-var() bool bIsBossMob;
-var() bool bCanUseClimbPaths;
 var bool bShouldLurk;
 var bool bHeadHasSplitted;
 var bool bPouncing;
-var bool bIsCoward;
 var bool bForcedWalkAnim;
 var bool bClientWalkAnim;
 
@@ -643,21 +639,6 @@ function DoorAttack(Actor A)
     //return;    
 }
 
-function GoToClimbPath(Vector JumpVel, AlienClimbMid PathWay)
-{
-    SetPhysics(2);
-    SetRotation(rotator(JumpVel));
-    Velocity = JumpVel;
-    ClimbPath = PathWay;
-    GotoState('WallPathMove');
-    //return;    
-}
-
-function ClimbPathEnd(Vector JumpVel)
-{
-    //return;    
-}
-
 simulated event KImpact(Actor Other, Vector pos, Vector impactVel, Vector impactNorm)
 {
     local Vector WallHit, WallNormal;
@@ -686,149 +667,6 @@ simulated event KImpact(Actor Other, Vector pos, Vector impactVel, Vector impact
     //return;    
 }
 
-state WallPathMove
-{
-    function BeginState()
-    {
-        Enable('Landed');
-        Enable('HitWall');
-        Controller.MinHitWall += float(100);
-        //return;        
-    }
-
-    function EndState()
-    {
-        // End:0x15
-        if(Physics == 9)
-        {
-            SetPhysics(2);
-        }
-        Controller.MinHitWall -= float(100);
-        bForcedWalkAnim = false;
-        //return;        
-    }
-
-    singular function Landed(Vector HitNormal)
-    {
-        local Vector D;
-
-        SetPhysics(9);
-        D = Normal(ClimbPath.Location - Location);
-        SetRotation(GetFloorOrientation(HitNormal, D));
-        SetBase(Base, HitNormal);
-        Acceleration = D * GroundSpeed;
-        AliensController(Controller).MoveToPoint(ClimbPath);
-        bForcedWalkAnim = true;
-        //return;        
-    }
-
-    function HitWall(Vector HitNormal, Actor Wall)
-    {
-        Landed(HitNormal);
-        //return;        
-    }
-
-    final function FindWall()
-    {
-        local Vector E, HL, HN;
-
-        E = GetCollisionExtent();
-        // End:0x4C
-        if(Trace(HL, HN, Location + vect(5.0, 0.0, 0.0), Location, false, E) != none)
-        {
-            Landed(HN);
-        }
-        // End:0x109
-        else
-        {
-            // End:0x8C
-            if(Trace(HL, HN, Location - vect(5.0, 0.0, 0.0), Location, false, E) != none)
-            {
-                Landed(HN);
-            }
-            // End:0x109
-            else
-            {
-                // End:0xCC
-                if(Trace(HL, HN, Location + vect(0.0, 5.0, 0.0), Location, false, E) != none)
-                {
-                    Landed(HN);
-                }
-                // End:0x109
-                else
-                {
-                    // End:0x109
-                    if(Trace(HL, HN, Location - vect(0.0, 5.0, 0.0), Location, false, E) != none)
-                    {
-                        Landed(HN);
-                    }
-                }
-            }
-        }
-        //return;        
-    }
-
-    function Tick(float Delta)
-    {
-        global.Tick(Delta);
-        // End:0x31
-        if(Physics == 9)
-        {
-            SetRotation(GetFloorOrientation(Floor, Velocity));
-        }
-        // End:0x47
-        else
-        {
-            // End:0x47
-            if(Physics == 2)
-            {
-                FindWall();
-            }
-        }
-        //return;        
-    }
-
-    function NotifyMoveDone()
-    {
-        // End:0x94
-        if((ClimbPath != none) && ClimbPath.NextPath != none)
-        {
-            // End:0x56
-            if(AlienClimbMid(ClimbPath.NextPath) == none)
-            {
-                ClimbPath.NextPath.SuggestMovePreparation(self);
-            }
-            // End:0x91
-            else
-            {
-                AliensController(Controller).MoveToPoint(ClimbPath.NextPath);
-                ClimbPath = AlienClimbMid(ClimbPath.NextPath);
-            }
-        }
-        // End:0x9B
-        else
-        {
-            GotoState('None');
-        }
-        //return;        
-    }
-
-    function ClimbPathEnd(Vector JumpVel)
-    {
-        SetPhysics(2);
-        SetRotation(rotator(JumpVel));
-        Velocity = JumpVel;
-        Controller.MoveTimer = -1.0;
-        GotoState('None');
-        //return;        
-    }
-
-Begin:
-    Sleep(7.0);
-    GotoState('None');
-    stop;                    
-}
-
 defaultproperties
 {
     CurrentDamType=class'DamTypeAlienSlash'
@@ -836,7 +674,7 @@ defaultproperties
     ProjectileBloodSplatClass=none
     ObliteratedEffectClass=Class'KFMod.BileExplosion'
     GibGroupClass=class'GibGroupAlien'
-    ControllerClass=class'AliensController'
+    ControllerClass=class'LairMonstersV1.LairAliensController'
     DodgeAnims[0]=Jump
     DodgeAnims[1]=Jump
     DodgeAnims[2]=Jump
