@@ -1,5 +1,5 @@
+//Don't forget to get the Gib Group class: GibGroupAlien
 class LairAlienQueen extends LairAliensBase
-    dependson(LairAlienEgg)
     hidecategories(AnimTweaks,DeRes,Force,Gib,Karma,UDamage,UnrealPawn)
     config(User);
 
@@ -74,8 +74,6 @@ simulated function PostNetReceive()
 function bool SetBossLaught()
 {
     local Controller C;
-
-    GotoState('LayEggs', 'DropEggs');
     C = Level.ControllerList;
     J0x20:
     // End:0x91 [Loop If]
@@ -113,9 +111,7 @@ simulated function PostBeginPlay()
 function bool MakeGrandEntry()
 {
     bAlwaysRelevant = true;
-    bIsBossMob = true;
-    GotoState('LayEggs', 'DropEggs');
-    return true;
+    return false;
     //return;    
 }
 
@@ -138,10 +134,6 @@ function TakeDamage(int Damage, Pawn instigatedBy, Vector HitLocation, Vector Mo
         bIsCoward = totalDamage > FearDamageCount;
         bShouldLurk = bIsCoward;
         // End:0x85
-        if(bIsCoward)
-        {
-            GotoState('LayEggs');
-        }
     }
     //return;    
 }
@@ -162,19 +154,7 @@ function GivenNewMarker()
 }
 
 function PlayChallengeSound()
-{
-    // End:0x48
-    if(NextEggDropTime < Level.TimeSeconds)
-    {
-        NextEggDropTime = Level.TimeSeconds + 2.0;
-        // End:0x48
-        if(InSafeSpot())
-        {
-            GotoState('LayEggs', 'DropEggs');
-        }
-    }
-    //return;    
-}
+{}
 
 function RangedAttack(Actor A)
 {
@@ -387,32 +367,8 @@ simulated function HurtRadius(float DamageAmount, float DamageRadius, class<Dama
 
 function Died(Controller Killer, class<DamageType> DamageType, Vector HitLocation)
 {
-    local Controller C;
-
     super(Pawn).Died(Killer, DamageType, HitLocation);
     // End:0xD6
-    if(bIsBossMob)
-    {
-        KFGameType(Level.Game).DoBossDeath();
-        C = Level.ControllerList;
-        J0x4F:
-        // End:0xD6 [Loop If]
-        if(C != none)
-        {
-            // End:0xBF
-            if(PlayerController(C) != none)
-            {
-                PlayerController(C).SetViewTarget(self);
-                PlayerController(C).ClientSetViewTarget(self);
-                PlayerController(C).bBehindView = true;
-                PlayerController(C).ClientSetBehindView(true);
-            }
-            C = C.nextController;
-            // [Loop Continue]
-            goto J0x4F;
-        }
-    }
-    //return;    
 }
 
 state RunningState
@@ -604,132 +560,6 @@ CheckCharge:
     stop;                    
 }
 
-state LayEggs extends RunningState
-{
-    function RangedAttack(Actor A)
-    {
-        local float D;
-
-        // End:0xBE
-        if(!bShotAnim && VSize(A.Location - Location) < ((MeleeRange + CollisionRadius) + A.CollisionRadius))
-        {
-            bShotAnim = true;
-            D = FRand();
-            // End:0x72
-            if(D < 0.330)
-            {
-                SetAnimAction('Eat');
-            }
-            // End:0x9A
-            else
-            {
-                // End:0x8F
-                if(D < 0.660)
-                {
-                    SetAnimAction('Melee02');
-                }
-                // End:0x9A
-                else
-                {
-                    SetAnimAction('Melee01');
-                }
-            }
-            Controller.bPreparingMove = true;
-            Acceleration = vect(0.0, 0.0, 0.0);
-        }
-        //return;        
-    }
-
-    function BeginState()
-    {
-        bIsCoward = true;
-        bShouldLurk = true;
-        GroundSpeed = OriginalGroundSpeed * 1.8750;
-        bRunning = true;
-        // End:0x49
-        if(Level.NetMode != NM_DedicatedServer)
-        {
-            PostNetReceive();
-        }
-        //return;        
-    }
-
-    function TakeDamage(int Damage, Pawn instigatedBy, Vector HitLocation, Vector Momentum, class<DamageType> DamageType, optional int HitIndex)
-    {
-        super(AlienQueen).TakeDamage(Damage, instigatedBy, HitLocation, Momentum, DamageType);
-        //return;        
-    }
-
-    function EndState()
-    {
-        totalDamage = 0;
-        bIsCoward = false;
-        bShouldLurk = false;
-        NextEggDropTime = (Level.TimeSeconds + 20.0) + (FRand() * 50.0);
-        GroundSpeed = GetOriginalGroundSpeed();
-        bRunning = false;
-        // End:0x70
-        if(Level.NetMode != NM_DedicatedServer)
-        {
-            PostNetReceive();
-        }
-        RunAttackTimeout = 0.0;
-        //return;        
-    }
-
-    final function PlayLayEggs()
-    {
-        bShotAnim = true;
-        SetAnimAction('Call');
-        Controller.bPreparingMove = true;
-        Acceleration = vect(0.0, 0.0, 0.0);
-        Controller.FocalPoint = (VRand() * float(2000)) + Location;
-        Controller.FocalPoint.Z = Location.Z;
-        Controller.GotoState('WaitForAnim');
-        //return;        
-    }
-
-    final function SpawnEgg()
-    {
-        local AlienEgg E;
-        local Vector X, Y, Z;
-
-        E = UnresolvedNativeFunction_97(class'AlienEgg',,, Location + vect(0.0, 0.0, 100.0));
-        GetAxes(Rotation, X, Y, Z);
-        E.Velocity = ((X * ((FRand() + 0.50) * -600.0)) + ((Y * (FRand() - 0.50)) * 700.0)) - ((vect(0.0, 0.0, 1.0) * FRand()) * 300.0);
-        //return;        
-    }
-
-Begin:
-    EggCounter = 0;
-    J0x08:
-    // End:0x39 [Loop If]
-    if((EggCounter < 10) && !InSafeSpot())
-    {
-        Sleep(0.50 + FRand());
-        ++ EggCounter;
-DropEggs:
-
-        // [Loop Continue]
-        goto J0x08;
-    }
-    PlayLayEggs();
-    Sleep(2.0);
-    EggCounter = byte(Rand(4));
-    J0x53:
-    // End:0x84 [Loop If]
-    if(EggCounter < 10)
-    {
-        SpawnEgg();
-        Sleep(0.10 + (FRand() * 0.20));
-        ++ EggCounter;
-        // [Loop Continue]
-        goto J0x53;
-    }
-    GotoState('None');
-    stop;                    
-}
-
 defaultproperties
 {
     ScreamRadius=700
@@ -799,7 +629,6 @@ defaultproperties
     OnlineHeadshotOffset=(X=5.0,Y=0.0,Z=53.0)
     OnlineHeadshotScale=1.50
     MotionDetectorThreat=2.0
-    bBoss=true
     HitSound=SoundGroup'AlienQueenSnd.QueenPain'
     DeathSound=SoundGroup'AlienQueenSnd.QueenDie'
     ChallengeSound[0]=SoundGroup'AlienQueenSnd.QueenIdle'
@@ -827,8 +656,8 @@ defaultproperties
     PeripheralVision=160.0
     MeleeRange=250.0
     GroundSpeed=260.0
-    HealthMax=40000.0
-    Health=40000
+    HealthMax=7500.0
+    Health=7500
     HeadRadius=25.0
     HeadHeight=22.20
     HeadScale=1.20
